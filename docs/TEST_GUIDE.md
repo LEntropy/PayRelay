@@ -77,13 +77,13 @@
 
 ### 1-2. PayRelay 내려받기
 
-https://github.com/LEntropy/PayRelay 에서 초록색 **Code** 버튼 → **Download ZIP**을 누르고, 원하는 곳에 압축을 풉니다. (Git이 있다면 `git clone https://github.com/LEntropy/PayRelay.git`)
+https://github.com/LEntropy/Pay_Logic 에서 초록색 **Code** 버튼 → **Download ZIP**을 누르고, 원하는 곳에 압축을 풉니다. (Git이 있다면 `git clone https://github.com/LEntropy/Pay_Logic.git`)
 
 ### 1-3. 폴더에서 PowerShell 열기
 
-1. 파일 탐색기에서 압축을 푼 폴더(`PayRelay-main`)를 엽니다. `docker-compose.yml` 파일이 보이면 맞는 폴더입니다.
+1. 파일 탐색기에서 압축을 푼 폴더(`Pay_Logic-main`)를 엽니다. `docker-compose.yml` 파일이 보이면 맞는 폴더입니다.
 2. 탐색기 위쪽 **주소창**을 클릭해 내용을 지우고 `powershell`을 입력한 뒤 Enter를 누릅니다.
-3. `PS C:\...\PayRelay-main>`처럼 폴더 경로가 보이는 창이 열리면 성공입니다.
+3. `PS C:\...\Pay_Logic-main>`처럼 폴더 경로가 보이는 창이 열리면 성공입니다.
 
 ### 1-4. 실행하기
 
