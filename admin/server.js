@@ -16,6 +16,10 @@ const CONTROL_TOKEN = env('CONTROL_TOKEN', '');
 const ADMIN_PASSWORD = env('ADMIN_PASSWORD', '');
 const ATTACKER_URL = env('ATTACKER_URL', 'http://attacker:7000');
 const SETTLE_DIR = env('SETTLE_DIR', '/data/settle');
+// The address this console's test terminal connects from, so the UI can point out when the
+// console itself has been banned (e.g. after sending forged telegrams on purpose).
+const CONSOLE_IP = Object.values(require('os').networkInterfaces()).flat()
+  .find((i) => i && i.family === 'IPv4' && !i.internal)?.address || '';
 
 const pool = mysql.createPool({
   host: env('DB_HOST', 'mysql'), user: env('DB_USER', 'admin_ro'), password: env('DB_PASSWORD', ''),
@@ -113,7 +117,7 @@ async function summary() {
        FROM merchants m LEFT JOIN v_daily_merchant d ON d.merchant_id = m.merchant_id AND d.biz_date = CURDATE()
       ORDER BY m.merchant_id`);
   const [stats, bans] = await Promise.all([control('STATS'), control('BANS')]);
-  return { date: today(), byStatus: rows, perMinute: perMin, security: sec, merchants, gateway: stats, bans };
+  return { date: today(), byStatus: rows, perMinute: perMin, security: sec, merchants, gateway: stats, bans, consoleIp: CONSOLE_IP };
 }
 
 async function transactions(q) {

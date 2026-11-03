@@ -226,7 +226,9 @@ $('posSend').onclick = async () => {
     const r = await api('/api/pos', { method: 'POST', body: JSON.stringify(body) });
     box.replaceChildren();
     if (r.error) {
-      box.append(el('div', 'verdict bad', r.error), el('p', 'muted', '게이트웨이가 응답 없이 연결을 끊는 것은 형식 위반이나 차단에 대한 정상 반응일 수 있습니다.'));
+      box.append(el('div', 'verdict bad', r.error),
+        el('p', 'muted', '게이트웨이가 응답 없이 연결을 끊는 것은 형식 위반이나 차단에 대한 정상 반응입니다.'),
+        el('p', '', 'MAC 위조를 1분 안에 5번 이상 보냈다면 이 관리 콘솔이 차단된 것입니다. "보안 · 차단" 탭에서 "(이 관리 콘솔)" 표시가 붙은 IP를 차단 해제하세요.'));
     } else {
       const d = r.decoded;
       const head = el('div', 'result-head');
@@ -254,7 +256,7 @@ async function loadSec() {
   table($('bans'), ['IP', '마지막 위반', { label: '남은 시간', num: 1 }, '커널(nftables)', ''], bans.map((b) => {
     const btn = el('button', 'small ghost', '차단 해제');
     btn.onclick = async () => { await api('/api/unban', { method: 'POST', body: JSON.stringify({ ip: b.ip }) }); loadSec(); };
-    return [b.ip, b.reason, `${b.remaining_s}초`, el('span', `pill ${b.nftables ? 'ok' : 'warn'}`, b.nftables ? '패킷 차단 중' : '프로세스만'), btn];
+    return [b.ip === s.consoleIp ? `${b.ip} (이 관리 콘솔)` : b.ip, b.reason, `${b.remaining_s}초`, el('span', `pill ${b.nftables ? 'ok' : 'warn'}`, b.nftables ? '패킷 차단 중' : '프로세스만'), btn];
   }));
   const ev = await api('/api/security?limit=150');
   const cls = { BANNED: 'bad', VIOLATION: 'warn', BAD_MAC: 'bad', RATE_LIMITED: 'warn', UNBANNED: 'ok', ORDER_REUSE: 'bad', MERCHANT_SUSPENDED: 'warn' };
