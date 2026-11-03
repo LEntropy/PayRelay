@@ -1,0 +1,14 @@
+{
+  "name": "payrelay-admin",
+  "version": "1.0.0",
+  "private": true,
+  "description": "PayRelay admin console: monitoring, security events, reconciliation, test terminal",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test test/"
+  },
+  "dependencies": {
+    "mysql2": "3.11.3"
+  }
+}

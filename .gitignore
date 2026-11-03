@@ -1,0 +1,6 @@
+bin/
+test-results/
+admin/node_modules/
+__pycache__/
+*.pyc
+.env

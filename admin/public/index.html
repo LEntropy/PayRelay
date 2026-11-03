@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PayRelay Admin</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<section id="login" class="login hidden">
+  <form id="loginForm" class="card narrow">
+    <h1>PayRelay 관리자</h1>
+    <p class="muted">PG 승인 중계 서버 관제 콘솔</p>
+    <label for="pw">관리자 비밀번호</label>
+    <input id="pw" type="password" autocomplete="current-password" required>
+    <button type="submit">로그인</button>
+    <p id="loginError" class="error"></p>
+    <p class="muted small">데모 비밀번호: admin1234!</p>
+  </form>
+</section>
+
+<div id="app" class="hidden">
+  <header class="top">
+    <div class="brand">PayRelay <span class="tag">PG 승인 중계 · 관제</span></div>
+    <nav id="tabs">
+      <button data-tab="dash" class="active">대시보드</button>
+      <button data-tab="tx">거래 내역</button>
+      <button data-tab="pos">테스트 단말</button>
+      <button data-tab="sec">보안 · 차단</button>
+      <button data-tab="attack">공격 시뮬레이션</button>
+      <button data-tab="recon">정산 대사</button>
+    </nav>
+    <button id="logout" class="ghost small">로그아웃</button>
+  </header>
+
+  <main>
+    <section id="tab-dash" class="tab">
+      <div class="tiles" id="tiles"></div>
+      <div class="grid2">
+        <div class="card">
+          <h2>최근 15분 거래 (분 단위)</h2>
+          <div id="chart" class="chart"></div>
+        </div>
+        <div class="card">
+          <h2>게이트웨이 상태 <span class="muted small">(C 서버 내부 제어 포트)</span></h2>
+          <dl id="gwStats" class="kv"></dl>
+        </div>
+      </div>
+      <div class="card">
+        <h2>가맹점별 오늘 현황</h2>
+        <div class="tablewrap"><table id="merchants"></table></div>
+      </div>
+    </section>
+
+    <section id="tab-tx" class="tab hidden">
+      <div class="card">
+        <div class="row">
+          <select id="txStatus">
+            <option value="">전체 상태</option>
+            <option>APPROVED</option><option>DECLINED</option><option>CANCELED</option>
+            <option>TIMEOUT</option><option>NET_CANCELED</option><option>REVERSAL_FAILED</option><option>PENDING</option>
+          </select>
+          <input id="txQuery" placeholder="주문번호 또는 PG 거래번호 앞부분">
+          <button id="txSearch">조회</button>
+        </div>
+        <div class="tablewrap"><table id="txTable"></table></div>
+      </div>
+      <div class="card hidden" id="txDetail"></div>
+    </section>
+
+    <section id="tab-pos" class="tab hidden">
+      <div class="grid2">
+        <div class="card">
+          <h2>테스트 단말 (가맹점 POS)</h2>
+          <p class="muted">고정길이 전문을 만들어 실제 TCP로 게이트웨이에 보냅니다.</p>
+          <div class="presets" id="presets"></div>
+          <div class="form">
+            <label>가맹점</label>
+            <select id="posMerchant">
+              <option value="M000000001">M000000001 데모 쇼핑몰 (초당 20건)</option>
+              <option value="M000000002">M000000002 데모 카페 (초당 5건)</option>
+              <option value="M000000003">M000000003 정지된 가맹점</option>
+            </select>
+            <label>전문 종류</label>
+            <select id="posType">
+              <option value="0200">0200 승인 요청</option>
+              <option value="0400">0400 취소 요청</option>
+              <option value="0800">0800 망관리 (연결 확인)</option>
+            </select>
+            <label>주문번호</label><input id="posOrder">
+            <label>금액 (원)</label><input id="posAmount" type="number" min="0">
+            <label>카드번호</label><input id="posCard">
+            <label>유효기간 (YYMM)</label><input id="posExpiry" value="2912">
+            <label>PG 거래번호 (취소 시)</label><input id="posPgTx">
+            <label class="check"><input type="checkbox" id="posBadMac"> MAC을 틀린 키로 서명 (위조 전문)</label>
+          </div>
+          <button id="posSend">전문 보내기</button>
+        </div>
+        <div class="card">
+          <h2>결과</h2>
+          <div id="posResult" class="muted">왼쪽에서 시나리오를 고르고 전문을 보내 보세요.</div>
+        </div>
+      </div>
+    </section>
+
+    <section id="tab-sec" class="tab hidden">
+      <div class="card">
+        <h2>차단된 IP</h2>
+        <p class="muted">프로토콜 위반이 1분에 5번 쌓이면 10분 동안 차단합니다. 게이트웨이 프로세스의 차단 목록과 리눅스 커널의 nftables에 함께 등록됩니다.</p>
+        <div class="tablewrap"><table id="bans"></table></div>
+      </div>
+      <div class="card">
+        <h2>보안 이벤트</h2>
+        <div class="tablewrap"><table id="secTable"></table></div>
+      </div>
+    </section>
+
+    <section id="tab-attack" class="tab hidden">
+      <div class="card">
+        <h2>공격 시뮬레이션</h2>
+        <p class="muted">별도 컨테이너(공격자 IP)에서 실제 악성 트래픽을 보내고, 게이트웨이가 어떻게 막는지 봅니다.</p>
+        <div class="presets" id="attacks"></div>
+        <div class="row"><button id="probe" class="ghost">공격자 IP 접속 가능 여부 확인</button><span id="probeResult" class="muted"></span></div>
+      </div>
+      <div class="card"><div id="attackResult" class="muted">시나리오를 선택하세요.</div></div>
+    </section>
+
+    <section id="tab-recon" class="tab hidden">
+      <div class="card">
+        <h2>정산 대사 (PG 기록 vs VAN 정산 파일)</h2>
+        <p class="muted">VAN이 매일 보내는 정산 파일과 PG의 거래 기록을 거래 단위로 맞춰 봅니다. 금액이 다른 거래는 사람이 확인해야 합니다.</p>
+        <div class="row"><input id="reconDate" placeholder="YYYYMMDD"><button id="reconRun">대사 실행</button></div>
+      </div>
+      <div class="card" id="reconResult"></div>
+    </section>
+  </main>
+</div>
+<script src="/app.js"></script>
+</body>
+</html>

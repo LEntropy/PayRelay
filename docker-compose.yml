@@ -1,0 +1,123 @@
+# PayRelay: PG approval gateway demo.
+#   docker compose up -d --build     then open http://localhost:8090 (admin console)
+# All secrets below are demo defaults. Override them with environment variables or a .env file.
+x-keys: &keys
+  VAN_MAC_KEY: ${VAN_MAC_KEY:-76616e2d6c696e6b2d64656d6f2d6b6579303030303030303030303030303030}
+
+services:
+  mysql:
+    image: mysql:8.4
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root-demo-pw}
+      TZ: Asia/Seoul
+    command: ["--default-time-zone=+09:00"]
+    volumes:
+      - ./db/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-p${MYSQL_ROOT_PASSWORD:-root-demo-pw}"]
+      interval: 5s
+      timeout: 3s
+      retries: 40
+
+  certs:
+    build: .
+    image: payrelay-runtime
+    command: ["gen_certs.sh", "/certs"]
+    volumes:
+      - certs:/certs
+
+  van:
+    image: payrelay-runtime
+    command: ["van-sim"]
+    environment:
+      <<: *keys
+      TZ: Asia/Seoul
+      VAN_DELAY_MS: "5000"
+    volumes:
+      - certs:/certs:ro
+      - settle:/data/settle
+    depends_on:
+      certs:
+        condition: service_completed_successfully
+
+  gateway:
+    image: payrelay-runtime
+    command: ["gateway-entrypoint.sh"]
+    cap_add: [NET_ADMIN]          # nftables bans
+    environment:
+      <<: *keys
+      TZ: Asia/Seoul
+      DB_HOST: mysql
+      DB_USER: gateway
+      DB_PASSWORD: ${GATEWAY_DB_PASSWORD:-gateway-demo-pw}
+      CARD_TOKEN_KEY: ${CARD_TOKEN_KEY:-636172642d746f6b656e2d64656d6f2d6b657930303030303030303030303030}
+      CONTROL_TOKEN: ${CONTROL_TOKEN:-control-demo-token-0123456789}
+      GW_WORKERS: "32"
+      GW_VAN_TIMEOUT_MS: "3000"
+      GW_BAN_THRESHOLD: "5"
+      GW_BAN_SECONDS: "600"
+      VAN_HOST: van
+    ports:
+      - "127.0.0.1:9100:9100"     # merchant telegrams, this PC only
+    volumes:
+      - certs:/certs:ro
+    depends_on:
+      mysql:
+        condition: service_healthy
+      van:
+        condition: service_started
+
+  admin:
+    build: ./admin
+    environment:
+      TZ: Asia/Seoul
+      DB_HOST: mysql
+      DB_USER: admin_ro
+      DB_PASSWORD: ${ADMIN_DB_PASSWORD:-admin-demo-pw}
+      GATEWAY_HOST: gateway
+      CONTROL_TOKEN: ${CONTROL_TOKEN:-control-demo-token-0123456789}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-admin1234!}
+      ATTACKER_URL: http://attacker:7000
+      SETTLE_DIR: /data/settle
+    ports:
+      - "127.0.0.1:8090:8090"     # admin console, this PC only
+    volumes:
+      - settle:/data/settle:ro
+    depends_on:
+      gateway:
+        condition: service_started
+
+  # Sends hostile traffic from its own IP address when the admin console asks for it.
+  attacker:
+    build: ./tools
+    command: ["python3", "-u", "attacker.py"]
+    environment:
+      GATEWAY_HOST: gateway
+    volumes:
+      - certs:/certs:ro
+    depends_on:
+      gateway:
+        condition: service_started
+
+  # Test runner (docker compose run --rm tester): normal traffic from a separate address.
+  tester:
+    build: ./tools
+    profiles: ["test"]
+    command: ["python3", "-u", "e2e_test.py"]
+    environment:
+      GATEWAY_HOST: gateway
+      DB_HOST: mysql
+      CONTROL_TOKEN: ${CONTROL_TOKEN:-control-demo-token-0123456789}
+      ATTACKER_URL: http://attacker:7000
+    volumes:
+      - settle:/data/settle:ro
+      - ./test-results:/results
+    depends_on:
+      gateway:
+        condition: service_started
+
+volumes:
+  mysql-data:
+  certs:
+  settle:
